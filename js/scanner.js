@@ -58,6 +58,10 @@ export const Scanner = {
 // you've entered a bottle once, its barcode is remembered locally forever,
 // so this lookup is only ever needed the first time you see a given bottle.
 export async function lookupBarcode(barcode) {
+  return (await lookupUpcItemDb(barcode)) || (await lookupOpenFoodFacts(barcode));
+}
+
+async function lookupUpcItemDb(barcode) {
   try {
     const res = await fetch(`https://api.upcitemdb.com/prod/trial/lookup?upc=${encodeURIComponent(barcode)}`, {
       headers: { Accept: 'application/json' },
@@ -73,5 +77,27 @@ export async function lookupBarcode(barcode) {
     };
   } catch (e) {
     return null; // offline, CORS-blocked, or rate-limited — that's fine
+  }
+}
+
+// Second attempt: Open Food Facts also indexes some beverages by barcode and
+// allows direct browser calls. Coverage for whiskey is spotty (it's mainly a
+// food database) but it's free and worth trying before giving up.
+async function lookupOpenFoodFacts(barcode) {
+  try {
+    const res = await fetch(`https://world.openfoodfacts.org/api/v2/product/${encodeURIComponent(barcode)}.json`, {
+      headers: { Accept: 'application/json' },
+    });
+    if (!res.ok) return null;
+    const data = await res.json();
+    const product = data && data.product;
+    if (!product || data.status !== 1) return null;
+    return {
+      name: product.product_name || '',
+      brand: (product.brands || '').split(',')[0].trim(),
+      image: product.image_url || null,
+    };
+  } catch (e) {
+    return null;
   }
 }

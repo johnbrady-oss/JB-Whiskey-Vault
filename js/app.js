@@ -1,5 +1,6 @@
 import DB from './db.js';
 import { Scanner, lookupBarcode } from './scanner.js';
+import { scanLabelImage } from './ocr.js';
 
 const $app = document.getElementById('app');
 
@@ -164,6 +165,12 @@ function renderForm() {
       <label>Photo</label>
       <div class="detail-photo" id="photo-preview">${b.photo ? `<img src="${b.photo}" />` : '📷 Tap to add a photo'}</div>
       <input type="file" accept="image/*" capture="environment" id="photo-input" style="display:none" />
+      <button class="btn secondary" id="btn-read-label" style="display:${b.photo ? 'block' : 'none'}">🔎 Read label & fill fields in</button>
+      <div id="ocr-status" style="display:none; text-align:center; color:var(--muted); font-size:13px; margin-top:8px;"></div>
+      <details id="ocr-raw-wrap" style="display:none; margin-top:8px;">
+        <summary style="color:var(--muted); font-size:12.5px; cursor:pointer;">Show raw scanned text</summary>
+        <div id="ocr-raw" style="white-space:pre-wrap; font-size:12px; color:var(--muted); margin-top:6px; font-family: ui-monospace, monospace;"></div>
+      </details>
     </div>
 
     <div class="field">
@@ -254,17 +261,54 @@ function renderForm() {
   `, 'collection');
 
   let photoData = b.photo || null;
+  let lastPhotoFile = null;
 
   document.getElementById('photo-preview').onclick = () => document.getElementById('photo-input').click();
   document.getElementById('photo-input').onchange = (e) => {
     const file = e.target.files[0];
     if (!file) return;
+    lastPhotoFile = file;
     const reader = new FileReader();
     reader.onload = () => {
       photoData = reader.result;
       document.getElementById('photo-preview').innerHTML = `<img src="${photoData}" />`;
+      document.getElementById('btn-read-label').style.display = 'block';
     };
     reader.readAsDataURL(file);
+  };
+
+  document.getElementById('btn-read-label').onclick = async () => {
+    const btn = document.getElementById('btn-read-label');
+    const statusEl = document.getElementById('ocr-status');
+    btn.disabled = true;
+    btn.textContent = 'Reading label…';
+    statusEl.style.display = 'block';
+    statusEl.textContent = 'This can take 10–20 seconds the first time, while the text reader loads.';
+    try {
+      const parsed = await scanLabelImage(lastPhotoFile || photoData);
+      const nameEl = document.getElementById('f-name');
+      const abvEl = document.getElementById('f-abv');
+      const volEl = document.getElementById('f-volume');
+      const ageEl = document.getElementById('f-age');
+      const catEl = document.getElementById('f-category');
+      if (parsed.name && !nameEl.value.trim()) nameEl.value = parsed.name;
+      if (parsed.abv && !abvEl.value.trim()) abvEl.value = parsed.abv;
+      if (parsed.volumeMl && String(volEl.value) === '700') volEl.value = parsed.volumeMl;
+      if (parsed.age && !ageEl.value.trim()) ageEl.value = parsed.age;
+      if (parsed.category) catEl.value = parsed.category;
+
+      const rawWrap = document.getElementById('ocr-raw-wrap');
+      document.getElementById('ocr-raw').textContent = parsed.rawText.trim() || '(no text detected)';
+      rawWrap.style.display = 'block';
+
+      statusEl.textContent = 'Done — double-check the fields above, especially name and distillery.';
+      setTimeout(() => { statusEl.style.display = 'none'; }, 4000);
+    } catch (err) {
+      statusEl.textContent = 'Could not read the label (needs an internet connection the first time). You can still fill fields in by hand.';
+    } finally {
+      btn.disabled = false;
+      btn.textContent = '🔎 Read label & fill fields in';
+    }
   };
 
   document.getElementById('f-status').onchange = (e) => {
