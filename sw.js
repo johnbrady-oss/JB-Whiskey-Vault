@@ -3,7 +3,7 @@
 // Barcode lookups over the network still require a connection, but scanning,
 // adding, and editing bottles all work fully offline.
 
-const CACHE_NAME = 'whiskey-vault-v1';
+const CACHE_NAME = 'whiskey-vault-v2';
 const APP_SHELL = [
   './',
   './index.html',
@@ -11,6 +11,7 @@ const APP_SHELL = [
   './css/style.css',
   './js/db.js',
   './js/scanner.js',
+  './js/ocr.js',
   './js/app.js',
   './icons/icon-192.png',
   './icons/icon-512.png'

@@ -10,6 +10,13 @@ barcodes — no App Store, no Mac, no developer account required.
   print your own QR label for bottles that don't have one.
 - Every barcode is remembered locally, so scanning the same bottle again
   instantly pulls up its record.
+- Take or choose a photo of the label and tap "Read label & fill fields in"
+  to have the app read the printed text on-device (no photo ever leaves your
+  phone) and pre-fill ABV, volume, age statement, and category, plus a best
+  guess at the name. This is plain text recognition, not a whiskey expert —
+  it's reliably good at the printed numbers, and only a best-effort guess at
+  the name/distillery, so always double-check what it fills in. The raw
+  scanned text is shown underneath so you can fix anything it missed.
 - Track distillery, category (single malt, single pot still, single grain,
   blended, etc.), age statement, ABV, volume, purchase price, estimated
   current value, status (sealed / open / finished / gifted), fill level for
